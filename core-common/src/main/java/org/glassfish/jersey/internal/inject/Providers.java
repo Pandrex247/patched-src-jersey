@@ -57,8 +57,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.Priority;
 
 import javax.ws.rs.ConstrainedTo;
+import javax.ws.rs.Priorities;
 import javax.ws.rs.RuntimeType;
 import javax.ws.rs.core.Feature;
 
@@ -350,16 +352,23 @@ public final class Providers {
 
     private static <T> List<ServiceHandle<T>> getServiceHandles(final ServiceLocator locator, final Class<T> contract,
                                                                 final Annotation... qualifiers) {
-
-        final List<ServiceHandle<T>> allServiceHandles = qualifiers == null
+        final List<ServiceHandle<T>> serviceHandles = qualifiers == null
                 ? locator.getAllServiceHandles(contract)
                 : locator.getAllServiceHandles(contract, qualifiers);
-
-        final ArrayList<ServiceHandle<T>> serviceHandles = new ArrayList<ServiceHandle<T>>();
-        for (final ServiceHandle handle : allServiceHandles) {
-            //noinspection unchecked
-            serviceHandles.add((ServiceHandle<T>) handle);
-        }
+        Collections.sort(serviceHandles, new Comparator<ServiceHandle<T>>() {
+            @Override
+            public int compare(ServiceHandle<T> serviceHandle1, ServiceHandle<T> serviceHandle2) {
+                if (getPriority(serviceHandle1.getService().getClass())
+                        == getPriority(serviceHandle2.getService().getClass())) {
+                    return 0;
+                } else if (getPriority(serviceHandle1.getService().getClass())
+                        < getPriority(serviceHandle2.getService().getClass())) {
+                    return -1;
+                } else {
+                    return 1;
+                }
+            }
+        });
         return serviceHandles;
     }
 
@@ -417,6 +426,15 @@ public final class Providers {
             set.addAll(Collections2.transform(hk2Providers, new ProviderToService<T>()));
             return set;
         }
+    }
+
+    private static int getPriority(Class<?> serviceClass) {
+        Priority annotation = serviceClass.getAnnotation(Priority.class);
+        if (annotation != null) {
+            return annotation.value();
+        }
+        // default priority
+        return Priorities.USER;
     }
 
     /**
