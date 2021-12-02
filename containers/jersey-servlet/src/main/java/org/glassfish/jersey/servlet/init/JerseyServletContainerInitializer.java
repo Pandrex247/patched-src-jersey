@@ -39,6 +39,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
 import javax.servlet.annotation.HandlesTypes;
 
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.servlet.ServletProperties;
@@ -111,6 +112,8 @@ public final class JerseyServletContainerInitializer implements ServletContainer
         if (classes == null) {
             classes = Collections.emptySet();
         }
+        classes.removeIf(clazz -> clazz.isAnnotationPresent(RegisterRestClient.class));
+
         // PRE INIT
         for (final ServletContainerProvider servletContainerProvider : allServletContainerProviders) {
             servletContainerProvider.preInit(servletContext, classes);
